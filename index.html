@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setlist — shows from your music</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Karla:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --cream:#F5F0E8;--cream-dark:#EDE5D4;--paper:#FAF7F2;
+    --ink:#1C1917;--ink-light:#44403C;--ink-faint:#78716C;--ink-ghost:#A8A29E;
+    --rust:#C2410C;--rust-pale:#FED7AA;--sage:#4A7C59;--sage-light:#D1FAE5;
+    --border:rgba(28,25,23,0.12);--border-strong:rgba(28,25,23,0.22);
+    --fd:'Playfair Display',Georgia,serif;--fb:'Karla',sans-serif;
+  }
+  body{background:var(--cream);color:var(--ink);font-family:var(--fb);min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+  *{position:relative;z-index:1}
+  .app{display:grid;grid-template-columns:258px 1fr;grid-template-rows:54px 1fr;height:100vh;overflow:hidden}
+
+  /* topbar */
+  .topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--border);background:var(--paper);gap:10px}
+  .logo{font-family:var(--fd);font-size:19px;font-weight:900;font-style:italic;color:var(--ink);display:flex;align-items:center;gap:7px;flex-shrink:0;text-decoration:none}
+  .logo-dot{width:20px;height:20px;background:var(--rust);border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .logo-dot svg{width:10px;height:10px;fill:white}
+  .url-bar{flex:1;max-width:440px;display:flex;align-items:center;gap:8px;background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:5px 13px;transition:border-color 0.15s}
+  .url-bar:focus-within{border-color:var(--rust)}
+  .url-bar input{flex:1;background:transparent;border:none;outline:none;font-family:var(--fb);font-size:13px;color:var(--ink)}
+  .url-bar input::placeholder{color:var(--ink-ghost)}
+  .url-bar-btn{background:var(--rust);color:white;border:none;border-radius:14px;padding:4px 11px;font-size:12px;font-family:var(--fb);cursor:pointer;font-weight:500;white-space:nowrap}
+  .url-bar-btn:hover{opacity:0.88}
+  .topbar-right{display:flex;align-items:center;gap:9px;flex-shrink:0}
+  .loc-pill{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-light);background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:5px 11px;cursor:pointer;font-family:var(--fb)}
+  .loc-dot{width:6px;height:6px;background:var(--rust);border-radius:50%;flex-shrink:0}
+  .sp-btn{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;background:#1DB954;color:#000;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;font-family:var(--fb)}
+  .sp-btn:hover{opacity:0.88}
+  .sp-btn svg{width:13px;height:13px;fill:#000}
+  .user-av{width:28px;height:28px;border-radius:50%;background:var(--rust-pale);color:var(--rust);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border);font-family:var(--fd);font-style:italic}
+
+  /* sidebar */
+  .sidebar{background:var(--paper);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+  .sidebar::-webkit-scrollbar{width:3px}.sidebar::-webkit-scrollbar-thumb{background:var(--border-strong)}
+  .sb-label{font-size:10px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink-ghost);padding:16px 18px 6px}
+  .sb-label:first-child{padding-top:18px}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:13px;color:var(--ink-light);cursor:pointer;border-left:2px solid transparent;transition:all 0.12s}
+  .nav-item:hover{background:var(--cream);color:var(--ink)}
+  .nav-item.active{color:var(--rust);border-left-color:var(--rust);background:var(--cream);font-weight:500}
+  .nav-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+  .nav-ct{margin-left:auto;font-size:11px;background:var(--cream-dark);color:var(--ink-faint);border-radius:20px;padding:1px 7px}
+  .nav-item.active .nav-ct{background:var(--rust-pale);color:var(--rust)}
+
+  /* example playlists */
+  .ex-playlist{display:flex;align-items:center;gap:9px;padding:7px 18px;cursor:pointer;transition:background 0.12s;border-left:2px solid transparent}
+  .ex-playlist:hover{background:var(--cream)}
+  .ex-playlist.active{background:var(--cream);border-left-color:var(--rust)}
+  .ex-thumb{width:30px;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--fd);font-style:italic;flex-shrink:0;border:1px solid var(--border)}
+  .ex-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+  .ex-meta{font-size:10px;color:var(--ink-ghost)}
+  .ex-badge{font-size:9px;background:var(--rust-pale);color:var(--rust);border-radius:3px;padding:1px 5px;font-weight:500;margin-left:auto;flex-shrink:0}
+
+  /* main */
+  .main{overflow-y:auto;background:var(--cream)}
+  .main::-webkit-scrollbar{width:5px}.main::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+  .tabs{display:flex;padding:0 30px;background:var(--paper);border-bottom:1px solid var(--border)}
+  .tab{padding:13px 16px;font-size:13px;font-family:var(--fb);color:var(--ink-faint);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:5px}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--rust);border-bottom-color:var(--rust);font-weight:500}
+  .tab svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .tab-badge{background:var(--rust-pale);color:var(--rust);font-size:10px;font-weight:600;border-radius:20px;padding:1px 6px}
+  .vc{display:none}.vc.active{display:block}
+
+  /* main header */
+  .mh{padding:22px 30px 16px;border-bottom:1px solid var(--border);background:var(--paper)}
+  .mh-title{font-family:var(--fd);font-size:24px;font-weight:900;font-style:italic;line-height:1.1}
+  .mh-sub{font-size:13px;color:var(--ink-faint);margin-top:3px}
+  .mh-sub em{font-style:italic;color:var(--rust)}
+  .filter-row{display:flex;align-items:center;gap:7px;margin-top:12px;flex-wrap:wrap}
+  .fb{font-size:11px;font-family:var(--fb);padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--ink-light);cursor:pointer}
+  .fb:hover{border-color:var(--border-strong)}
+  .fb.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .prog-bar{height:2px;background:var(--cream-dark);border-radius:1px;overflow:hidden;margin-top:10px}
+  .prog-fill{height:100%;background:var(--rust);border-radius:1px;width:0;transition:width 0.35s ease}
+
+  /* shows */
+  .feed{padding:22px 30px}
+  .dg{margin-bottom:26px}
+  .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+  .dd{font-family:var(--fd);font-size:18px;font-weight:700;font-style:italic}
+  .dl{font-size:12px;color:var(--ink-faint)}
+  .dc{margin-left:auto;font-size:11px;color:var(--ink-ghost);font-style:italic}
+  .sc{display:grid;grid-template-columns:48px 1fr auto;gap:11px;align-items:start;padding:12px 14px;background:var(--paper);border:1px solid var(--border);border-radius:7px;margin-bottom:7px;cursor:pointer;transition:all 0.15s;animation:fu 0.22s ease both}
+  .sc:hover{border-color:var(--border-strong);transform:translateY(-1px);box-shadow:0 3px 14px rgba(28,25,23,0.07)}
+  .sc.sim{border-style:dashed;background:#FDFAF7}
+  @keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+  .sc:nth-child(1){animation-delay:0.03s}.sc:nth-child(2){animation-delay:0.07s}.sc:nth-child(3){animation-delay:0.11s}.sc:nth-child(4){animation-delay:0.15s}.sc:nth-child(5){animation-delay:0.19s}
+  .av{width:48px;height:48px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:14px;font-weight:700;font-style:italic;flex-shrink:0;border:1px solid var(--border)}
+  .sb2{min-width:0}
+  .st{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .sa{font-family:var(--fd);font-size:15px;font-weight:700}
+  .bdg{font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;white-space:nowrap}
+  .bpl{background:var(--rust-pale);color:var(--rust)}
+  .bsim{background:var(--sage-light);color:#065F46}
+  .bhot{background:#FEE2E2;color:#991B1B}
+  .sv{font-size:12px;color:var(--ink-light);margin-top:2px}
+  .sm{display:flex;align-items:center;gap:9px;margin-top:4px;flex-wrap:wrap}
+  .mi{font-size:11px;color:var(--ink-ghost);display:flex;align-items:center;gap:3px}
+  .mi svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2}
+  .sr2{font-size:11px;color:var(--sage);font-style:italic;margin-top:3px}
+  .mr{display:flex;align-items:center;gap:5px;margin-top:3px}
+  .mb{width:52px;height:3px;background:var(--cream-dark);border-radius:2px;overflow:hidden}
+  .mf{height:100%;background:var(--sage);border-radius:2px}
+  .mp{font-size:10px;color:var(--sage);font-weight:500}
+  .sac{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  .hbtn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-ghost);transition:all 0.15s}
+  .hbtn:hover{border-color:var(--rust);color:var(--rust)}
+  .hbtn.saved{background:var(--rust);color:white;border-color:var(--rust)}
+  .hbtn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+  .hbtn.saved svg{fill:white}
+  .shbtn{font-size:11px;color:var(--ink-faint);background:transparent;border:none;cursor:pointer;display:flex;align-items:center;gap:3px;font-family:var(--fb);padding:0}
+  .shbtn:hover{color:var(--rust)}
+  .shbtn svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2}
+  .sp2{font-size:11px;color:var(--ink-ghost)}
+  .sdiv{display:flex;align-items:center;gap:10px;margin:22px 0 12px}
+  .sdl{flex:1;height:1px;background:var(--border)}
+  .sdt{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-ghost);white-space:nowrap;font-weight:500}
+
+  /* skeleton */
+  .sk-card{padding:12px 14px;background:var(--paper);border:1px solid var(--border);border-radius:7px;margin-bottom:7px;display:flex;gap:11px}
+  .sk{background:linear-gradient(90deg,var(--cream-dark) 25%,var(--cream) 50%,var(--cream-dark) 75%);background-size:200% 100%;animation:sh 1.3s infinite;border-radius:4px}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .sk-av{width:48px;height:48px;border-radius:5px;flex-shrink:0}
+  .sk-body{flex:1;display:flex;flex-direction:column;gap:8px;padding-top:3px}
+
+  /* state panels */
+  .sp{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 30px;text-align:center;gap:10px}
+  .si{width:50px;height:50px;border-radius:50%;background:var(--cream-dark);display:flex;align-items:center;justify-content:center}
+  .si svg{width:22px;height:22px;stroke:var(--ink-ghost);fill:none;stroke-width:1.5}
+  .st2{font-family:var(--fd);font-size:18px;font-weight:700;font-style:italic}
+  .ss{font-size:13px;color:var(--ink-faint);max-width:280px;line-height:1.6}
+
+  /* saved */
+  .sv-view{padding:22px 30px}
+  .sv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px}
+  .svc{background:var(--paper);border:1px solid var(--border);border-radius:9px;padding:14px;transition:all 0.15s}
+  .svc:hover{border-color:var(--border-strong);box-shadow:0 3px 12px rgba(28,25,23,0.07)}
+  .svt{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .sva{width:40px;height:40px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:13px;font-weight:700;font-style:italic;border:1px solid var(--border);flex-shrink:0}
+  .svar{font-family:var(--fd);font-size:14px;font-weight:700}
+  .svv{font-size:11px;color:var(--ink-faint);margin-top:1px}
+  .svf{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--border)}
+  .svd{font-size:11px;color:var(--ink-faint)}
+  .sh2btn{font-size:11px;font-weight:500;color:var(--rust);background:var(--rust-pale);border:none;border-radius:20px;padding:4px 11px;cursor:pointer;font-family:var(--fb);display:flex;align-items:center;gap:4px}
+  .sh2btn:hover{opacity:0.8}
+  .sh2btn svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2}
+
+  /* toast */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--paper);border-radius:7px;padding:10px 16px;font-size:12px;display:flex;align-items:center;gap:9px;z-index:999;transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 8px 28px rgba(28,25,23,0.2);white-space:nowrap}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .tl{font-size:11px;color:var(--rust-pale);font-family:monospace;background:rgba(255,255,255,0.1);padding:2px 7px;border-radius:3px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+
+  /* config */
+  .co{display:none;position:fixed;inset:0;background:rgba(28,25,23,0.45);z-index:100;align-items:center;justify-content:center}
+  .co.open{display:flex}
+  .cp{background:var(--paper);border-radius:11px;padding:26px;width:440px;max-width:90vw;max-height:80vh;overflow-y:auto;position:relative;box-shadow:0 18px 55px rgba(28,25,23,0.18)}
+  .cp h2{font-family:var(--fd);font-size:19px;font-weight:700;font-style:italic;margin-bottom:5px}
+  .cp p{font-size:12px;color:var(--ink-faint);margin-bottom:16px;line-height:1.6}
+  .cx{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--ink-ghost);font-size:17px}
+  .fg{margin-bottom:14px}
+  .fl{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink-ghost);margin-bottom:5px}
+  .fi{width:100%;font-family:var(--fb);font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--cream);color:var(--ink);outline:none}
+  .fi:focus{border-color:var(--rust)}
+  .fn{font-size:11px;color:var(--ink-ghost);margin-top:4px;line-height:1.5}
+  .fn a{color:var(--rust);text-decoration:none}
+  .ca{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .btn-s{font-size:13px;font-family:var(--fb);padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;color:var(--ink-light)}
+  .btn-p{font-size:13px;font-family:var(--fb);padding:7px 14px;border:none;border-radius:6px;background:var(--ink);color:var(--paper);cursor:pointer;font-weight:500}
+  .as{display:flex;align-items:center;gap:6px;font-size:12px;padding:7px 11px;border-radius:6px;margin-bottom:13px}
+  .as.ok{background:var(--sage-light);color:#065F46}
+  .as.warn{background:#FEF9C3;color:#713F12}
+  .as.err{background:#FEE2E2;color:#991B1B}
+  .asd{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+  /* deploy note */
+  .deploy-note{background:#FEF9C3;border:1px solid #FDE68A;border-radius:7px;padding:12px 14px;font-size:12px;color:#713F12;line-height:1.6;margin-bottom:14px}
+  .deploy-note code{background:#FEF08A;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <a class="logo" href="#">
+      <div class="logo-dot"><svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></div>
+      setlist
+    </a>
+    <div class="url-bar">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      <input type="text" id="url-input" placeholder="Paste a Spotify playlist URL…" />
+      <button class="url-bar-btn" onclick="loadFromUrl()">Load</button>
+    </div>
+    <div class="topbar-right">
+      <div class="loc-pill" onclick="promptLocation()">
+        <span class="loc-dot"></span>
+        <span id="loc-label">Set location</span>
+      </div>
+      <div id="sp-area">
+        <button class="sp-btn" onclick="initiateSpotifyAuth()">
+          <svg viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+          Connect Spotify
+        </button>
+      </div>
+      <button style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:11px;font-family:var(--fb);color:var(--ink-faint);" onclick="openConfig()">⚙ Setup</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-label">Discover</div>
+    <div class="nav-item active" onclick="setNav(this,'feed')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Shows for You
+      <span class="nav-ct" id="nc-feed">—</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this,'saved')">
+      <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      Saved Shows
+      <span class="nav-ct" id="nc-saved">0</span>
+    </div>
+
+    <!-- Example editorial playlists — always shown -->
+    <div class="sb-label">Spotify Playlists</div>
+    <div id="example-playlists"></div>
+
+    <!-- User playlists — shown after Spotify connect -->
+    <div id="user-playlists-section" style="display:none">
+      <div class="sb-label">Your Playlists</div>
+      <div id="user-playlists"></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="tabs">
+      <button class="tab active" id="tab-feed" onclick="switchTab('feed')">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Feed
+      </button>
+      <button class="tab" id="tab-saved" onclick="switchTab('saved')">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        Saved
+        <span class="tab-badge" id="tb-saved" style="display:none">0</span>
+      </button>
+    </div>
+
+    <div class="vc active" id="view-feed">
+      <div id="feed-content"></div>
+    </div>
+    <div class="vc" id="view-saved">
+      <div style="padding:22px 30px 16px;border-bottom:1px solid var(--border);background:var(--paper);">
+        <div class="mh-title" style="font-family:var(--fd);font-size:22px;font-weight:900;font-style:italic;">Saved Shows</div>
+        <div class="mh-sub">Shows you've bookmarked — tap to buy tickets</div>
+      </div>
+      <div class="sv-view"><div id="saved-list" class="sv-grid"></div>
+        <div id="saved-empty" class="sp">
+          <div class="si"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
+          <div class="st2">Nothing saved yet</div>
+          <div class="ss">Tap ♥ on any show to save it here</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Config overlay -->
+<div class="co" id="co">
+  <div class="cp">
+    <button class="cx" onclick="closeConfig()">✕</button>
+    <h2>Setup</h2>
+    <p>Keys are stored only in your browser. See the README for Vercel deployment instructions to enable public playlist loading without login.</p>
+
+    <div class="deploy-note">
+      <strong>For public playlists</strong> — deploy <code>api/spotify-token.js</code> to Vercel and set <code>SPOTIFY_CLIENT_ID</code> + <code>SPOTIFY_CLIENT_SECRET</code> as env vars. Then enter your Vercel URL below. Without this, paste a URL and the app will prompt for login instead.
+    </div>
+
+    <div id="tm-st" class="as warn"><span class="asd"></span> Ticketmaster: not configured</div>
+    <div id="lfm-st" class="as warn"><span class="asd"></span> Last.fm: not configured</div>
+
+    <div class="fg">
+      <div class="fl">Token Server URL (your Vercel deployment)</div>
+      <input class="fi" id="token-server" type="text" placeholder="https://your-app.vercel.app/api/spotify-token" />
+      <div class="fn">After deploying the included <code>api/spotify-token.js</code> file to Vercel.</div>
+    </div>
+    <div class="fg">
+      <div class="fl">Ticketmaster API Key</div>
+      <input class="fi" id="tm-key" type="text" placeholder="Free at developer.ticketmaster.com" />
+      <div class="fn">Free · 5,000 req/day · instant approval</div>
+    </div>
+    <div class="fg">
+      <div class="fl">Last.fm API Key</div>
+      <input class="fi" id="lfm-key" type="text" placeholder="Free at last.fm/api/account/create" />
+      <div class="fn">Free · used for similar artist matching</div>
+    </div>
+    <div class="fg">
+      <div class="fl">Spotify Client ID (for personal playlists)</div>
+      <input class="fi" id="sp-cid" type="text" placeholder="From developer.spotify.com/dashboard" />
+    </div>
+    <div class="fg">
+      <div class="fl">Search radius (miles)</div>
+      <input class="fi" id="radius" type="number" value="25" min="1" max="150" />
+    </div>
+    <div class="ca">
+      <button class="btn-s" onclick="closeConfig()">Cancel</button>
+      <button class="btn-p" onclick="saveConfig()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+  <span id="toast-msg"></span>
+  <span class="tl" id="toast-link"></span>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// EDITORIAL PLAYLISTS — auto-load on open, no auth needed
+// These are public Spotify playlists we use as example content
+// ─────────────────────────────────────────────────────────────
+const EDITORIAL_PLAYLISTS = [
+  { id: '37i9dQZF1DX4dyzvuaRJ0n', name: 'Lorem',           desc: 'Indie editorial',    color: ['#FED7AA','#9A3412'] },
+  { id: '37i9dQZF1DWXRqgorJj26U', name: 'Rock This',       desc: 'Rock essentials',    color: ['#FEE2E2','#991B1B'] },
+  { id: '37i9dQZF1DX2Nc3B70tvx0', name: 'Life Sucks',      desc: 'Sad indie / folk',   color: ['#EDE9FE','#4C1D95'] },
+  { id: '37i9dQZF1DWWEcRhUVtL8n', name: 'Pollen',          desc: 'Indie / alternative',color: ['#D1FAE5','#065F46'] },
+  { id: '37i9dQZF1DX4SBhb3fqCJd', name: 'Are & Be',        desc: 'R&B favorites',      color: ['#FCE7F3','#9D174D'] },
+  { id: '6QBeETVQOte10WDZXiCesw', name: 'New Indie',       desc: 'May 2026 · indiemono',color:['#CFFAFE','#164E63'] },
+  { id: '7M4pAYnbACdHJ6TgYZSbny', name: 'Indie Rock 2026', desc: '86K saves',          color: ['#FEF9C3','#713F12'] },
+];
+
+// ─────────────────────────────────────────────────────────────
+// State / Config
+// ─────────────────────────────────────────────────────────────
+const CFG = 'sl_cfg';
+let cfg = JSON.parse(localStorage.getItem(CFG) || '{}');
+let saved = JSON.parse(localStorage.getItem('sl_saved') || '[]');
+let spotifyToken = null;          // user OAuth token (personal playlists)
+let publicToken = null;           // client credentials token (public playlists)
+let publicTokenExpiry = 0;
+let allShows = [];
+let userLoc = cfg.location || null;
+
+// ─────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  loadConfigUI();
+  renderEditorialPlaylists();
+  updateSavedBadge();
+  renderSaved();
+  handleSpotifyCallback();
+
+  if (userLoc) {
+    document.getElementById('loc-label').textContent =
+      `${userLoc.city || (userLoc.lat.toFixed(2)+','+userLoc.lng.toFixed(2))} · ${cfg.radius||25}mi`;
+  }
+
+  if (cfg.tmKey) setStatus('tm-st', 'ok', 'Ticketmaster: connected');
+  if (cfg.lfmKey) setStatus('lfm-st', 'ok', 'Last.fm: connected');
+
+  // Restore user Spotify session
+  const tok = localStorage.getItem('sl_sp_tok');
+  const exp = parseInt(localStorage.getItem('sl_sp_exp') || '0');
+  if (tok && Date.now() < exp) {
+    spotifyToken = tok;
+    onUserSpotifyConnected();
+  }
+
+  // Auto-load first editorial playlist
+  await autoLoadFirst();
+
+  // URL input debounce
+  let dbt;
+  document.getElementById('url-input').addEventListener('input', e => {
+    clearTimeout(dbt);
+    if (!e.target.value.trim()) return;
+    dbt = setTimeout(() => {}, 600);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// Render editorial playlist sidebar
+// ─────────────────────────────────────────────────────────────
+function renderEditorialPlaylists() {
+  const c = document.getElementById('example-playlists');
+  c.innerHTML = '';
+  EDITORIAL_PLAYLISTS.forEach((pl, i) => {
+    const [bg, fg] = pl.color;
+    const initials = pl.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const div = document.createElement('div');
+    div.className = 'ex-playlist' + (i===0 ? ' active' : '');
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <div class="ex-thumb" style="background:${bg};color:${fg};">${initials}</div>
+      <div style="min-width:0;flex:1;">
+        <div class="ex-name">${esc(pl.name)}</div>
+        <div class="ex-meta">${esc(pl.desc)}</div>
+      </div>
+      ${i === 0 ? '<span class="ex-badge">live</span>' : ''}`;
+    div.onclick = () => {
+      document.querySelectorAll('.ex-playlist, .playlist-item').forEach(p => p.classList.remove('active'));
+      div.classList.add('active');
+      loadPublicPlaylist(pl.id, pl.name);
+    };
+    c.appendChild(div);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auto-load first playlist on open
+// ─────────────────────────────────────────────────────────────
+async function autoLoadFirst() {
+  if (!cfg.tmKey) {
+    // Show a nice welcome state explaining what to do
+    document.getElementById('feed-content').innerHTML = `
+      <div class="mh" style="background:var(--paper)">
+        <div class="mh-title">Welcome to Setlist</div>
+        <div class="mh-sub" style="margin-top:6px;line-height:1.7;">
+          Discover live shows from your music. To get started:<br>
+          <strong>1.</strong> Click <strong>⚙ Setup</strong> and add a free <a href="https://developer.ticketmaster.com" target="_blank" style="color:var(--rust)">Ticketmaster API key</a><br>
+          <strong>2.</strong> Set your location (top bar)<br>
+          <strong>3.</strong> Pick any playlist on the left — or paste a Spotify URL above
+        </div>
+      </div>
+      <div class="sp">
+        <div class="si"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div class="st2">Shows load here</div>
+        <div class="ss">Add your Ticketmaster key in ⚙ Setup to see real upcoming shows near you.</div>
+        <button style="margin-top:8px;font-size:13px;font-family:var(--fb);padding:8px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="openConfig()">⚙ Open Setup</button>
+      </div>`;
+    return;
+  }
+
+  if (!userLoc) {
+    document.getElementById('feed-content').innerHTML = `
+      <div class="sp">
+        <div class="si"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="st2">Set your location</div>
+        <div class="ss">Click your location in the top bar so we know which shows are near you.</div>
+        <button style="margin-top:8px;font-size:13px;font-family:var(--fb);padding:8px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="promptLocation()">Set location</button>
+      </div>`;
+    return;
+  }
+
+  // Load first editorial playlist
+  const first = EDITORIAL_PLAYLISTS[0];
+  await loadPublicPlaylist(first.id, first.name);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Get public Spotify token via token server (or fallback to user token)
+// ─────────────────────────────────────────────────────────────
+async function getPublicToken() {
+  // Return cached token if still valid
+  if (publicToken && Date.now() < publicTokenExpiry) return publicToken;
+
+  const serverUrl = cfg.tokenServer;
+  if (!serverUrl) {
+    // Fallback: if user is logged in, use their token
+    if (spotifyToken) return spotifyToken;
+    return null;
+  }
+
+  try {
+    const r = await fetch(serverUrl, { method: 'POST' });
+    if (!r.ok) throw new Error('Token server error: ' + r.status);
+    const d = await r.json();
+    publicToken = d.access_token;
+    publicTokenExpiry = Date.now() + (d.expires_in - 60) * 1000; // 60s buffer
+    return publicToken;
+  } catch(e) {
+    console.warn('Token server failed:', e.message);
+    return spotifyToken || null; // fallback to user token
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Load a public playlist by ID
+// ─────────────────────────────────────────────────────────────
+async function loadPublicPlaylist(playlistId, playlistName) {
+  if (!cfg.tmKey) { openConfig(); return; }
+  if (!userLoc)   { promptLocation(); return; }
+
+  showSkeleton(playlistName);
+  animateProgress();
+
+  const token = await getPublicToken();
+  if (!token) {
+    // No token available at all — prompt login
+    document.getElementById('feed-content').innerHTML = `
+      <div class="sp">
+        <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div class="st2">Token server needed</div>
+        <div class="ss">Add your Vercel token server URL in ⚙ Setup to load public playlists without login. Or connect your Spotify account.</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:center;">
+          <button style="font-size:13px;font-family:var(--fb);padding:8px 14px;background:#1DB954;color:#000;border:none;border-radius:20px;cursor:pointer;" onclick="initiateSpotifyAuth()">Connect Spotify</button>
+          <button style="font-size:13px;font-family:var(--fb);padding:8px 14px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="openConfig()">⚙ Setup</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  try {
+    // Fetch playlist tracks
+    const r = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(artists))`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error('Spotify error ' + r.status);
+    const d = await r.json();
+
+    const artistSet = new Set();
+    (d.items || []).forEach(item => {
+      if (item.track?.artists) item.track.artists.forEach(a => artistSet.add(a.name));
+    });
+    const artists = [...artistSet].slice(0, 25);
+
+    const plShows = await fetchTMShows(artists, 'playlist');
+
+    let simShows = [];
+    if (cfg.lfmKey && artists.length > 0) {
+      const similar = await fetchSimilarArtists(artists.slice(0, 7));
+      const newOnes = similar.filter(s => !artistSet.has(s.name)).slice(0, 10);
+      simShows = await fetchTMShows(newOnes.map(s=>s.name), 'similar', similar);
+    }
+
+    allShows = [...plShows, ...simShows];
+    document.getElementById('nc-feed').textContent = allShows.length;
+    renderFeed(playlistName, allShows);
+  } catch(e) {
+    document.getElementById('feed-content').innerHTML = `
+      <div class="sp">
+        <div class="st2">Couldn't load playlist</div>
+        <div class="ss">${esc(e.message)}</div>
+      </div>`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Load from pasted URL
+// ─────────────────────────────────────────────────────────────
+function loadFromUrl() {
+  const val = document.getElementById('url-input').value.trim();
+  const match = val.match(/playlist\/([A-Za-z0-9]+)/);
+  if (!match) { showToast('Paste a Spotify playlist URL', ''); return; }
+  const id = match[1];
+  const name = 'Your playlist';
+  document.querySelectorAll('.ex-playlist, .playlist-item').forEach(p => p.classList.remove('active'));
+  loadPublicPlaylist(id, name);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Ticketmaster
+// ─────────────────────────────────────────────────────────────
+async function fetchTMShows(artistNames, type, similarMeta=[]) {
+  const { lat, lng } = userLoc;
+  const radius = cfg.radius || 25;
+  const results = [];
+  const seen = new Set();
+
+  await Promise.all(artistNames.map(async (name, i) => {
+    await new Promise(r => setTimeout(r, i * 75));
+    try {
+      const url = 'https://app.ticketmaster.com/discovery/v2/events.json?' +
+        new URLSearchParams({
+          apikey: cfg.tmKey,
+          keyword: name,
+          classificationName: 'music',
+          latlong: `${lat},${lng}`,
+          radius, unit: 'miles',
+          size: 3,
+          sort: 'date,asc',
+          startDateTime: new Date().toISOString().split('.')[0]+'Z'
+        });
+      const r = await fetch(url);
+      const d = await r.json();
+      (d._embedded?.events || []).forEach(ev => {
+        if (seen.has(ev.id)) return;
+        seen.add(ev.id);
+        const venue = ev._embedded?.venues?.[0];
+        const meta = type === 'similar' ? similarMeta.find(s => s.name === name) : null;
+        results.push({
+          id: ev.id,
+          artist: name,
+          venue: venue?.name || 'TBA',
+          city: venue?.city?.name || '',
+          state: venue?.state?.stateCode || '',
+          date: ev.dates?.start?.localDate,
+          time: ev.dates?.start?.localTime,
+          url: ev.url,
+          type,
+          minPrice: ev.priceRanges?.[0]?.min,
+          maxPrice: ev.priceRanges?.[0]?.max,
+          similarTo: meta?.match || [],
+          matchScore: meta?.score || null,
+        });
+      });
+    } catch(e) {}
+  }));
+
+  return results.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+}
+
+// ─────────────────────────────────────────────────────────────
+// Last.fm similar artists
+// ─────────────────────────────────────────────────────────────
+async function fetchSimilarArtists(names) {
+  const map = new Map();
+  await Promise.all(names.map(async name => {
+    try {
+      const r = await fetch(`https://ws.audioscrobbler.com/2.0/?method=artist.getSimilar&artist=${encodeURIComponent(name)}&api_key=${cfg.lfmKey}&format=json&limit=5`);
+      const d = await r.json();
+      (d.similarartists?.artist || []).forEach(sim => {
+        if (!map.has(sim.name)) map.set(sim.name, { name: sim.name, score: Math.round(parseFloat(sim.match)*100), match: [name] });
+        else map.get(sim.name).match.push(name);
+      });
+    } catch(e) {}
+  }));
+  return [...map.values()].sort((a,b) => b.score - a.score);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Render feed
+// ─────────────────────────────────────────────────────────────
+function renderFeed(title, shows) {
+  const fc = document.getElementById('feed-content');
+  if (!shows.length) {
+    fc.innerHTML = `<div class="mh"><div class="mh-title">${esc(title)}</div><div class="mh-sub">No shows found within ${cfg.radius||25} miles. Try a wider radius in ⚙ Setup.</div></div>`;
+    return;
+  }
+
+  const byDate = {};
+  shows.forEach(s => { const k = s.date||'TBD'; if(!byDate[k]) byDate[k]=[]; byDate[k].push(s); });
+
+  const pl = shows.filter(s=>s.type==='playlist'), sim = shows.filter(s=>s.type==='similar');
+
+  let html = `<div class="mh">
+    <div class="mh-title">${esc(title)}</div>
+    <div class="mh-sub"><em>${pl.length} artist${pl.length!==1?'s':''} from this playlist</em> playing near you · ${sim.length} similar picks</div>
+    <div class="filter-row">
+      <button class="fb active" onclick="filter('all',this)">All (${shows.length})</button>
+      <button class="fb" onclick="filter('playlist',this)">On playlist (${pl.length})</button>
+      <button class="fb" onclick="filter('similar',this)">Similar artists (${sim.length})</button>
+    </div>
+  </div><div class="feed" id="shows-feed">`;
+
+  Object.entries(byDate).forEach(([date, dayShows]) => {
+    const ordered = [...dayShows.filter(s=>s.type==='playlist'), ...dayShows.filter(s=>s.type==='similar')];
+    const dt = date !== 'TBD' ? new Date(date+'T12:00:00') : null;
+    html += `<div class="dg">
+      <div class="dh">
+        <div class="dd">${dt ? dt.toLocaleDateString('en-US',{weekday:'long'}) : 'Date TBD'}</div>
+        <div class="dl">${dt ? dt.toLocaleDateString('en-US',{month:'long',day:'numeric'}) : ''}</div>
+        <div class="dc">${ordered.length} show${ordered.length!==1?'s':''}</div>
+      </div>
+      ${ordered.map(s => cardHTML(s)).join('')}
+    </div>`;
+  });
+
+  html += `</div>`;
+  fc.innerHTML = html;
+}
+
+function cardHTML(s) {
+  const init = s.artist.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const AVCOLORS = {A:'#FEF3C7,#92400E',B:'#FEE2E2,#991B1B',C:'#D1FAE5,#065F46',D:'#EDE9FE,#4C1D95',E:'#FED7AA,#9A3412',F:'#CFFAFE,#164E63',G:'#FCE7F3,#9D174D',H:'#FEF9C3,#713F12',I:'#F3F4F6,#374151',J:'#D1FAE5,#065F46',K:'#EDE9FE,#4C1D95',L:'#FEE2E2,#991B1B',M:'#FED7AA,#9A3412',N:'#CFFAFE,#164E63',O:'#FCE7F3,#9D174D',P:'#FEF3C7,#92400E',Q:'#D1FAE5,#065F46',R:'#EDE9FE,#4C1D95',S:'#FED7AA,#9A3412',T:'#FEE2E2,#991B1B',U:'#CFFAFE,#164E63',V:'#FCE7F3,#9D174D',W:'#FEF9C3,#713F12',X:'#D1FAE5,#065F46',Y:'#FEE2E2,#991B1B',Z:'#EDE9FE,#4C1D95'};
+  const [bg, fg] = (AVCOLORS[init[0]] || '#F3F4F6,#374151').split(',');
+  const isSaved = saved.some(x=>x.id===s.id);
+  const price = s.minPrice ? `$${Math.round(s.minPrice)}${s.maxPrice&&s.maxPrice!==s.minPrice?'–$'+Math.round(s.maxPrice):''}` : '';
+  const loc = [s.venue, s.city, s.state].filter(Boolean).join(' · ');
+  const sid = esc(s.id), sJson = esc(JSON.stringify(s).replace(/'/g,"\\'"));
+
+  return `<div class="sc${s.type==='similar'?' sim':''}" data-id="${sid}" data-type="${s.type}" onclick="openTickets('${esc(s.url||'')}')">
+    <div class="av" style="background:${bg};color:${fg};">${init}</div>
+    <div class="sb2">
+      <div class="st">
+        <span class="sa">${esc(s.artist)}</span>
+        ${s.type==='playlist'?'<span class="bdg bpl">On playlist</span>':'<span class="bdg bsim">Similar</span>'}
+      </div>
+      <div class="sv">${esc(loc)}</div>
+      <div class="sm">
+        ${s.time?`<span class="mi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${s.time.slice(0,5)}</span>`:''}
+        ${price?`<span class="mi">${esc(price)}</span>`:''}
+      </div>
+      ${s.type==='similar'&&s.similarTo?.length?`<div class="sr2">Similar to: ${esc(s.similarTo.slice(0,2).join(', '))}${s.matchScore?' — '+s.matchScore+'% match':''}</div>`:''}
+      ${s.matchScore?`<div class="mr"><div class="mb"><div class="mf" style="width:${s.matchScore}%"></div></div><span class="mp">${s.matchScore}%</span></div>`:''}
+    </div>
+    <div class="sac">
+      <button class="hbtn${isSaved?' saved':''}" data-id="${sid}" onclick="event.stopPropagation();toggleSave(this,'${sJson}')">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      </button>
+      <button class="shbtn" onclick="event.stopPropagation();shareShow('${esc(s.artist)}','${esc(s.url||'')}')">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+      ${price?`<span class="sp2">${esc(price)}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function filter(type, btn) {
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.sc').forEach(c => {
+    c.style.display = (type==='all'||c.dataset.type===type) ? '' : 'none';
+  });
+  document.querySelectorAll('.dg').forEach(g => {
+    const vis = [...g.querySelectorAll('.sc')].some(c=>c.style.display!=='none');
+    g.style.display = vis ? '' : 'none';
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Spotify OAuth PKCE (personal playlists)
+// ─────────────────────────────────────────────────────────────
+function initiateSpotifyAuth() {
+  if (!cfg.spotifyClientId) { openConfig(); return; }
+  const v = genVerifier(128);
+  sessionStorage.setItem('pkce_v', v);
+  genChallenge(v).then(ch => {
+    location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+      client_id: cfg.spotifyClientId,
+      response_type: 'code',
+      redirect_uri: location.origin + location.pathname,
+      scope: 'playlist-read-private playlist-read-collaborative user-read-private',
+      code_challenge_method: 'S256',
+      code_challenge: ch,
+      state: 'sl_auth'
+    });
+  });
+}
+
+function genVerifier(len) {
+  const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  return Array.from(crypto.getRandomValues(new Uint8Array(len))).map(x=>c[x%c.length]).join('');
+}
+async function genChallenge(v) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function handleSpotifyCallback() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('state') !== 'sl_auth' || !p.get('code')) return;
+  history.replaceState({}, '', location.pathname);
+  const v = sessionStorage.getItem('pkce_v');
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: cfg.spotifyClientId, grant_type: 'authorization_code', code: p.get('code'), redirect_uri: location.origin+location.pathname, code_verifier: v })
+    });
+    const d = await r.json();
+    if (d.access_token) {
+      spotifyToken = d.access_token;
+      localStorage.setItem('sl_sp_tok', spotifyToken);
+      localStorage.setItem('sl_sp_exp', Date.now() + d.expires_in * 1000);
+      onUserSpotifyConnected();
+    }
+  } catch(e) {}
+}
+
+async function onUserSpotifyConnected() {
+  try {
+    const me = await fetch('https://api.spotify.com/v1/me', { headers: { 'Authorization': 'Bearer ' + spotifyToken } }).then(r=>r.json());
+    document.getElementById('sp-area').innerHTML = `<div class="user-av" title="${esc(me.display_name||'')}">${(me.display_name||'?')[0].toUpperCase()}</div>`;
+    loadUserPlaylists();
+  } catch(e) { localStorage.removeItem('sl_sp_tok'); spotifyToken = null; }
+}
+
+async function loadUserPlaylists() {
+  const d = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', { headers: { 'Authorization': 'Bearer ' + spotifyToken } }).then(r=>r.json());
+  const sec = document.getElementById('user-playlists-section');
+  const list = document.getElementById('user-playlists');
+  sec.style.display = '';
+  list.innerHTML = '';
+  const colors = [['#FED7AA','#9A3412'],['#D1FAE5','#065F46'],['#E0E7FF','#3730A3'],['#FCE7F3','#9D174D'],['#FEF9C3','#713F12'],['#CFFAFE','#164E63']];
+  (d.items || []).forEach((pl, i) => {
+    const [bg, fg] = colors[i % colors.length];
+    const div = document.createElement('div');
+    div.className = 'ex-playlist';
+    div.innerHTML = `<div class="ex-thumb" style="background:${bg};color:${fg};">${pl.name.slice(0,2).toUpperCase()}</div>
+      <div style="min-width:0;flex:1;"><div class="ex-name">${esc(pl.name)}</div><div class="ex-meta">${pl.tracks.total} tracks</div></div>`;
+    div.onclick = () => {
+      document.querySelectorAll('.ex-playlist, .playlist-item').forEach(p=>p.classList.remove('active'));
+      div.classList.add('active');
+      loadPublicPlaylist(pl.id, pl.name);
+    };
+    list.appendChild(div);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Save / share
+// ─────────────────────────────────────────────────────────────
+function toggleSave(btn, json) {
+  const id = btn.dataset.id;
+  if (btn.classList.contains('saved')) {
+    saved = saved.filter(s=>s.id!==id);
+    btn.classList.remove('saved');
+  } else {
+    try { saved.push(JSON.parse(json)); } catch(e) {}
+    btn.classList.add('saved');
+  }
+  localStorage.setItem('sl_saved', JSON.stringify(saved));
+  updateSavedBadge();
+  renderSaved();
+}
+
+function updateSavedBadge() {
+  const n = saved.length;
+  ['tb-saved','nc-saved'].forEach(id => { const el = document.getElementById(id); if(el){ el.textContent = n; el.style.display = n>0?'':'none'; } });
+  document.getElementById('nc-saved').style.display = '';
+  document.getElementById('nc-saved').textContent = n;
+}
+
+function renderSaved() {
+  const list = document.getElementById('saved-list');
+  const empty = document.getElementById('saved-empty');
+  list.innerHTML = '';
+  empty.style.display = saved.length ? 'none' : '';
+  saved.forEach(s => {
+    const init = s.artist.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const price = s.minPrice ? `$${Math.round(s.minPrice)}` : '';
+    const dateStr = s.date ? new Date(s.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : 'TBD';
+    const card = document.createElement('div');
+    card.className = 'svc';
+    card.innerHTML = `<div class="svt"><div class="sva" style="background:#FED7AA;color:#9A3412;">${init}</div>
+      <div><div class="svar">${esc(s.artist)}</div><div class="svv">${esc(s.venue)}</div></div></div>
+      <div class="svf"><span class="svd">${dateStr}${price?' · '+price:''}</span>
+      <button class="sh2btn" onclick="shareShow('${esc(s.artist)}','${esc(s.url||'')}')">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button></div>`;
+    card.onclick = () => { if(s.url) window.open(s.url,'_blank'); };
+    list.appendChild(card);
+  });
+}
+
+function shareShow(artist, url) {
+  const link = url || location.href;
+  if (navigator.clipboard) navigator.clipboard.writeText(link);
+  showToast(`Link copied for ${artist}`, link.slice(0,45)+(link.length>45?'…':''));
+}
+
+function openTickets(url) { if (url) window.open(url, '_blank'); }
+
+// ─────────────────────────────────────────────────────────────
+// Location
+// ─────────────────────────────────────────────────────────────
+function promptLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      cfg.location = userLoc;
+      save();
+      reverseGeocode(userLoc.lat, userLoc.lng);
+    }, () => { const c = prompt('Your city (e.g. New York, NY):'); if(c) geocodeCity(c); });
+  } else { const c = prompt('Your city:'); if(c) geocodeCity(c); }
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const d = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`).then(r=>r.json());
+    const city = d.address.city || d.address.town || 'Nearby';
+    const state = d.address.state_code || '';
+    userLoc.city = `${city}${state?', '+state:''}`;
+    cfg.location = userLoc; save();
+    document.getElementById('loc-label').textContent = `${userLoc.city} · ${cfg.radius||25}mi`;
+    autoLoadFirst();
+  } catch(e) {}
+}
+
+async function geocodeCity(city) {
+  try {
+    const d = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`).then(r=>r.json());
+    if (d[0]) {
+      userLoc = { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), city };
+      cfg.location = userLoc; save();
+      document.getElementById('loc-label').textContent = `${city} · ${cfg.radius||25}mi`;
+      autoLoadFirst();
+    }
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────
+function loadConfigUI() {
+  if (cfg.tokenServer) document.getElementById('token-server').value = cfg.tokenServer;
+  if (cfg.tmKey) document.getElementById('tm-key').value = cfg.tmKey;
+  if (cfg.lfmKey) document.getElementById('lfm-key').value = cfg.lfmKey;
+  if (cfg.spotifyClientId) document.getElementById('sp-cid').value = cfg.spotifyClientId;
+  if (cfg.radius) document.getElementById('radius').value = cfg.radius;
+}
+
+function saveConfig() {
+  cfg.tokenServer = document.getElementById('token-server').value.trim();
+  cfg.tmKey = document.getElementById('tm-key').value.trim();
+  cfg.lfmKey = document.getElementById('lfm-key').value.trim();
+  cfg.spotifyClientId = document.getElementById('sp-cid').value.trim();
+  cfg.radius = parseInt(document.getElementById('radius').value) || 25;
+  save();
+  if (cfg.tmKey) setStatus('tm-st','ok','Ticketmaster: connected');
+  if (cfg.lfmKey) setStatus('lfm-st','ok','Last.fm: connected');
+  closeConfig();
+  showToast('Config saved','');
+  autoLoadFirst();
+}
+
+function save() { localStorage.setItem(CFG, JSON.stringify(cfg)); }
+function openConfig() { document.getElementById('co').classList.add('open'); }
+function closeConfig() { document.getElementById('co').classList.remove('open'); }
+function setStatus(id, level, msg) { const el=document.getElementById(id); el.className=`as ${level}`; el.innerHTML=`<span class="asd"></span> ${msg}`; }
+
+// ─────────────────────────────────────────────────────────────
+// UI helpers
+// ─────────────────────────────────────────────────────────────
+function showSkeleton(title) {
+  document.getElementById('feed-content').innerHTML = `
+    <div class="mh"><div class="mh-title">Finding shows from ${esc(title)}</div>
+    <div class="mh-sub">Searching Ticketmaster near ${userLoc?.city||'you'}…</div>
+    <div class="prog-bar"><div class="prog-fill" id="pf"></div></div></div>
+    <div class="feed">${Array(5).fill(0).map((_,i)=>`<div class="sk-card" style="animation-delay:${i*0.07}s"><div class="sk sk-av"></div><div class="sk-body"><div class="sk" style="height:14px;width:52%"></div><div class="sk" style="height:12px;width:70%"></div><div class="sk" style="height:10px;width:38%"></div></div></div>`).join('')}</div>`;
+}
+
+function animateProgress() {
+  let p = 0;
+  const iv = setInterval(() => {
+    p = Math.min(p + 7, 88);
+    const el = document.getElementById('pf');
+    if (el) el.style.width = p+'%'; else clearInterval(iv);
+  }, 280);
+}
+
+let toastTimer;
+function showToast(msg, link) {
+  document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-link').textContent = link;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.vc').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('view-'+t).classList.add('active');
+}
+
+function setNav(el, t) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  switchTab(t);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
