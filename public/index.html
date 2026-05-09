@@ -159,32 +159,6 @@
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--paper);border-radius:7px;padding:10px 16px;font-size:12px;display:flex;align-items:center;gap:9px;z-index:999;transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 8px 28px rgba(28,25,23,0.2);white-space:nowrap}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .tl{font-size:11px;color:var(--rust-pale);font-family:monospace;background:rgba(255,255,255,0.1);padding:2px 7px;border-radius:3px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
-
-  /* config */
-  .co{display:none;position:fixed;inset:0;background:rgba(28,25,23,0.45);z-index:100;align-items:center;justify-content:center}
-  .co.open{display:flex}
-  .cp{background:var(--paper);border-radius:11px;padding:26px;width:440px;max-width:90vw;max-height:80vh;overflow-y:auto;position:relative;box-shadow:0 18px 55px rgba(28,25,23,0.18)}
-  .cp h2{font-family:var(--fd);font-size:19px;font-weight:700;font-style:italic;margin-bottom:5px}
-  .cp p{font-size:12px;color:var(--ink-faint);margin-bottom:16px;line-height:1.6}
-  .cx{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--ink-ghost);font-size:17px}
-  .fg{margin-bottom:14px}
-  .fl{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink-ghost);margin-bottom:5px}
-  .fi{width:100%;font-family:var(--fb);font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--cream);color:var(--ink);outline:none}
-  .fi:focus{border-color:var(--rust)}
-  .fn{font-size:11px;color:var(--ink-ghost);margin-top:4px;line-height:1.5}
-  .fn a{color:var(--rust);text-decoration:none}
-  .ca{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
-  .btn-s{font-size:13px;font-family:var(--fb);padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;color:var(--ink-light)}
-  .btn-p{font-size:13px;font-family:var(--fb);padding:7px 14px;border:none;border-radius:6px;background:var(--ink);color:var(--paper);cursor:pointer;font-weight:500}
-  .as{display:flex;align-items:center;gap:6px;font-size:12px;padding:7px 11px;border-radius:6px;margin-bottom:13px}
-  .as.ok{background:var(--sage-light);color:#065F46}
-  .as.warn{background:#FEF9C3;color:#713F12}
-  .as.err{background:#FEE2E2;color:#991B1B}
-  .asd{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
-
-  /* deploy note */
-  .deploy-note{background:#FEF9C3;border:1px solid #FDE68A;border-radius:7px;padding:12px 14px;font-size:12px;color:#713F12;line-height:1.6;margin-bottom:14px}
-  .deploy-note code{background:#FEF08A;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
 </style>
 </head>
 <body>
@@ -204,7 +178,7 @@
     <div class="topbar-right">
       <div class="loc-pill" onclick="promptLocation()">
         <span class="loc-dot"></span>
-        <span id="loc-label">Set location</span>
+        <span id="loc-label">Locating…</span>
       </div>
       <div id="sp-area">
         <button class="sp-btn" onclick="initiateSpotifyAuth()">
@@ -212,7 +186,6 @@
           Connect Spotify
         </button>
       </div>
-      <button style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:11px;font-family:var(--fb);color:var(--ink-faint);" onclick="openConfig()">⚙ Setup</button>
     </div>
   </header>
 
@@ -230,7 +203,7 @@
       <span class="nav-ct" id="nc-saved">0</span>
     </div>
 
-    <!-- Example editorial playlists — always shown -->
+    <!-- Editorial playlists — always shown, no auth needed -->
     <div class="sb-label">Spotify Playlists</div>
     <div id="example-playlists"></div>
 
@@ -274,50 +247,6 @@
   </main>
 </div>
 
-<!-- Config overlay -->
-<div class="co" id="co">
-  <div class="cp">
-    <button class="cx" onclick="closeConfig()">✕</button>
-    <h2>Setup</h2>
-    <p>Keys are stored only in your browser. See the README for Vercel deployment instructions to enable public playlist loading without login.</p>
-
-    <div class="deploy-note">
-      <strong>For public playlists</strong> — deploy <code>api/spotify-token.js</code> to Vercel and set <code>SPOTIFY_CLIENT_ID</code> + <code>SPOTIFY_CLIENT_SECRET</code> as env vars. Then enter your Vercel URL below. Without this, paste a URL and the app will prompt for login instead.
-    </div>
-
-    <div id="tm-st" class="as warn"><span class="asd"></span> Ticketmaster: not configured</div>
-    <div id="lfm-st" class="as warn"><span class="asd"></span> Last.fm: not configured</div>
-
-    <div class="fg">
-      <div class="fl">Token Server URL (your Vercel deployment)</div>
-      <input class="fi" id="token-server" type="text" placeholder="https://your-app.vercel.app/api/spotify-token" />
-      <div class="fn">After deploying the included <code>api/spotify-token.js</code> file to Vercel.</div>
-    </div>
-    <div class="fg">
-      <div class="fl">Ticketmaster API Key</div>
-      <input class="fi" id="tm-key" type="text" placeholder="Free at developer.ticketmaster.com" />
-      <div class="fn">Free · 5,000 req/day · instant approval</div>
-    </div>
-    <div class="fg">
-      <div class="fl">Last.fm API Key</div>
-      <input class="fi" id="lfm-key" type="text" placeholder="Free at last.fm/api/account/create" />
-      <div class="fn">Free · used for similar artist matching</div>
-    </div>
-    <div class="fg">
-      <div class="fl">Spotify Client ID (for personal playlists)</div>
-      <input class="fi" id="sp-cid" type="text" placeholder="From developer.spotify.com/dashboard" />
-    </div>
-    <div class="fg">
-      <div class="fl">Search radius (miles)</div>
-      <input class="fi" id="radius" type="number" value="25" min="1" max="150" />
-    </div>
-    <div class="ca">
-      <button class="btn-s" onclick="closeConfig()">Cancel</button>
-      <button class="btn-p" onclick="saveConfig()">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- Toast -->
 <div class="toast" id="toast">
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -327,8 +256,15 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────
+// App-level keys — fill in before deploying
+// Last.fm key is low-sensitivity and fine to embed in frontend.
+// Spotify Client ID is a public identifier, not a secret.
+// ─────────────────────────────────────────────────────────────
+const LASTFM_API_KEY    = '';  // last.fm API key
+const SPOTIFY_CLIENT_ID = '';  // from developer.spotify.com/dashboard
+
+// ─────────────────────────────────────────────────────────────
 // EDITORIAL PLAYLISTS — auto-load on open, no auth needed
-// These are public Spotify playlists we use as example content
 // ─────────────────────────────────────────────────────────────
 const EDITORIAL_PLAYLISTS = [
   { id: '37i9dQZF1DX4dyzvuaRJ0n', name: 'Lorem',           desc: 'Indie editorial',    color: ['#FED7AA','#9A3412'] },
@@ -341,34 +277,25 @@ const EDITORIAL_PLAYLISTS = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-// State / Config
+// State
 // ─────────────────────────────────────────────────────────────
 const CFG = 'sl_cfg';
-let cfg = JSON.parse(localStorage.getItem(CFG) || '{}');
+let cfg   = JSON.parse(localStorage.getItem(CFG) || '{}');
 let saved = JSON.parse(localStorage.getItem('sl_saved') || '[]');
-let spotifyToken = null;          // user OAuth token (personal playlists)
-let publicToken = null;           // client credentials token (public playlists)
+let spotifyToken = null;
+let publicToken  = null;
 let publicTokenExpiry = 0;
 let allShows = [];
-let userLoc = cfg.location || null;
+let userLoc  = cfg.location || null;
 
 // ─────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
-  loadConfigUI();
   renderEditorialPlaylists();
   updateSavedBadge();
   renderSaved();
   handleSpotifyCallback();
-
-  if (userLoc) {
-    document.getElementById('loc-label').textContent =
-      `${userLoc.city || (userLoc.lat.toFixed(2)+','+userLoc.lng.toFixed(2))} · ${cfg.radius||25}mi`;
-  }
-
-  if (cfg.tmKey) setStatus('tm-st', 'ok', 'Ticketmaster: connected');
-  if (cfg.lfmKey) setStatus('lfm-st', 'ok', 'Last.fm: connected');
 
   // Restore user Spotify session
   const tok = localStorage.getItem('sl_sp_tok');
@@ -378,16 +305,14 @@ window.addEventListener('load', async () => {
     onUserSpotifyConnected();
   }
 
-  // Auto-load first editorial playlist
-  await autoLoadFirst();
-
-  // URL input debounce
-  let dbt;
-  document.getElementById('url-input').addEventListener('input', e => {
-    clearTimeout(dbt);
-    if (!e.target.value.trim()) return;
-    dbt = setTimeout(() => {}, 600);
-  });
+  if (userLoc) {
+    document.getElementById('loc-label').textContent =
+      `${userLoc.city || (userLoc.lat.toFixed(2)+','+userLoc.lng.toFixed(2))} · ${cfg.radius||25}mi`;
+    await autoLoadFirst();
+  } else {
+    // Trigger browser geolocation automatically on first visit
+    promptLocation();
+  }
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -419,70 +344,39 @@ function renderEditorialPlaylists() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Auto-load first playlist on open
+// Auto-load first editorial playlist once location is available
 // ─────────────────────────────────────────────────────────────
 async function autoLoadFirst() {
-  if (!cfg.tmKey) {
-    // Show a nice welcome state explaining what to do
-    document.getElementById('feed-content').innerHTML = `
-      <div class="mh" style="background:var(--paper)">
-        <div class="mh-title">Welcome to Setlist</div>
-        <div class="mh-sub" style="margin-top:6px;line-height:1.7;">
-          Discover live shows from your music. To get started:<br>
-          <strong>1.</strong> Click <strong>⚙ Setup</strong> and add a free <a href="https://developer.ticketmaster.com" target="_blank" style="color:var(--rust)">Ticketmaster API key</a><br>
-          <strong>2.</strong> Set your location (top bar)<br>
-          <strong>3.</strong> Pick any playlist on the left — or paste a Spotify URL above
-        </div>
-      </div>
-      <div class="sp">
-        <div class="si"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-        <div class="st2">Shows load here</div>
-        <div class="ss">Add your Ticketmaster key in ⚙ Setup to see real upcoming shows near you.</div>
-        <button style="margin-top:8px;font-size:13px;font-family:var(--fb);padding:8px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="openConfig()">⚙ Open Setup</button>
-      </div>`;
-    return;
-  }
-
   if (!userLoc) {
     document.getElementById('feed-content').innerHTML = `
       <div class="sp">
         <div class="si"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-        <div class="st2">Set your location</div>
-        <div class="ss">Click your location in the top bar so we know which shows are near you.</div>
-        <button style="margin-top:8px;font-size:13px;font-family:var(--fb);padding:8px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="promptLocation()">Set location</button>
+        <div class="st2">Allow location</div>
+        <div class="ss">Grant location access so we can find shows near you.</div>
+        <button style="margin-top:8px;font-size:13px;font-family:var(--fb);padding:8px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="promptLocation()">Share location</button>
       </div>`;
     return;
   }
-
-  // Load first editorial playlist
-  const first = EDITORIAL_PLAYLISTS[0];
-  await loadPublicPlaylist(first.id, first.name);
+  await loadPublicPlaylist(EDITORIAL_PLAYLISTS[0].id, EDITORIAL_PLAYLISTS[0].name);
 }
 
 // ─────────────────────────────────────────────────────────────
-// Get public Spotify token via token server (or fallback to user token)
+// Get public Spotify token via our server-side proxy
 // ─────────────────────────────────────────────────────────────
 async function getPublicToken() {
-  // Return cached token if still valid
   if (publicToken && Date.now() < publicTokenExpiry) return publicToken;
-
-  const serverUrl = cfg.tokenServer;
-  if (!serverUrl) {
-    // Fallback: if user is logged in, use their token
-    if (spotifyToken) return spotifyToken;
-    return null;
-  }
+  if (spotifyToken) return spotifyToken;
 
   try {
-    const r = await fetch(serverUrl, { method: 'POST' });
+    const r = await fetch('/api/spotify-token', { method: 'POST' });
     if (!r.ok) throw new Error('Token server error: ' + r.status);
     const d = await r.json();
     publicToken = d.access_token;
-    publicTokenExpiry = Date.now() + (d.expires_in - 60) * 1000; // 60s buffer
+    publicTokenExpiry = Date.now() + (d.expires_in - 60) * 1000;
     return publicToken;
   } catch(e) {
-    console.warn('Token server failed:', e.message);
-    return spotifyToken || null; // fallback to user token
+    console.warn('Spotify token fetch failed:', e.message);
+    return null;
   }
 }
 
@@ -490,30 +384,24 @@ async function getPublicToken() {
 // Load a public playlist by ID
 // ─────────────────────────────────────────────────────────────
 async function loadPublicPlaylist(playlistId, playlistName) {
-  if (!cfg.tmKey) { openConfig(); return; }
-  if (!userLoc)   { promptLocation(); return; }
+  if (!userLoc) { promptLocation(); return; }
 
   showSkeleton(playlistName);
   animateProgress();
 
   const token = await getPublicToken();
   if (!token) {
-    // No token available at all — prompt login
     document.getElementById('feed-content').innerHTML = `
       <div class="sp">
         <div class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-        <div class="st2">Token server needed</div>
-        <div class="ss">Add your Vercel token server URL in ⚙ Setup to load public playlists without login. Or connect your Spotify account.</div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;justify-content:center;">
-          <button style="font-size:13px;font-family:var(--fb);padding:8px 14px;background:#1DB954;color:#000;border:none;border-radius:20px;cursor:pointer;" onclick="initiateSpotifyAuth()">Connect Spotify</button>
-          <button style="font-size:13px;font-family:var(--fb);padding:8px 14px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="openConfig()">⚙ Setup</button>
-        </div>
+        <div class="st2">Couldn't reach Spotify</div>
+        <div class="ss">Connect your Spotify account to browse playlists.</div>
+        <button style="margin-top:10px;font-size:13px;font-family:var(--fb);padding:8px 14px;background:#1DB954;color:#000;border:none;border-radius:20px;cursor:pointer;" onclick="initiateSpotifyAuth()">Connect Spotify</button>
       </div>`;
     return;
   }
 
   try {
-    // Fetch playlist tracks
     const r = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(artists))`, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -529,7 +417,7 @@ async function loadPublicPlaylist(playlistId, playlistName) {
     const plShows = await fetchTMShows(artists, 'playlist');
 
     let simShows = [];
-    if (cfg.lfmKey && artists.length > 0) {
+    if (LASTFM_API_KEY && artists.length > 0) {
       const similar = await fetchSimilarArtists(artists.slice(0, 7));
       const newOnes = similar.filter(s => !artistSet.has(s.name)).slice(0, 10);
       simShows = await fetchTMShows(newOnes.map(s=>s.name), 'similar', similar);
@@ -554,14 +442,12 @@ function loadFromUrl() {
   const val = document.getElementById('url-input').value.trim();
   const match = val.match(/playlist\/([A-Za-z0-9]+)/);
   if (!match) { showToast('Paste a Spotify playlist URL', ''); return; }
-  const id = match[1];
-  const name = 'Your playlist';
   document.querySelectorAll('.ex-playlist, .playlist-item').forEach(p => p.classList.remove('active'));
-  loadPublicPlaylist(id, name);
+  loadPublicPlaylist(match[1], 'Your playlist');
 }
 
 // ─────────────────────────────────────────────────────────────
-// Ticketmaster
+// Ticketmaster — via proxy so the API key stays server-side
 // ─────────────────────────────────────────────────────────────
 async function fetchTMShows(artistNames, type, similarMeta=[]) {
   const { lat, lng } = userLoc;
@@ -572,24 +458,23 @@ async function fetchTMShows(artistNames, type, similarMeta=[]) {
   await Promise.all(artistNames.map(async (name, i) => {
     await new Promise(r => setTimeout(r, i * 75));
     try {
-      const url = 'https://app.ticketmaster.com/discovery/v2/events.json?' +
-        new URLSearchParams({
-          apikey: cfg.tmKey,
-          keyword: name,
-          classificationName: 'music',
-          latlong: `${lat},${lng}`,
-          radius, unit: 'miles',
-          size: 3,
-          sort: 'date,asc',
-          startDateTime: new Date().toISOString().split('.')[0]+'Z'
-        });
-      const r = await fetch(url);
+      const params = new URLSearchParams({
+        keyword: name,
+        classificationName: 'music',
+        latlong: `${lat},${lng}`,
+        radius, unit: 'miles',
+        size: 3,
+        sort: 'date,asc',
+        source: 'ticketmaster',
+        startDateTime: new Date().toISOString().split('.')[0]+'Z'
+      });
+      const r = await fetch(`/api/ticketmaster?${params}`);
       const d = await r.json();
       (d._embedded?.events || []).forEach(ev => {
         if (seen.has(ev.id)) return;
         seen.add(ev.id);
         const venue = ev._embedded?.venues?.[0];
-        const meta = type === 'similar' ? similarMeta.find(s => s.name === name) : null;
+        const meta  = type === 'similar' ? similarMeta.find(s => s.name === name) : null;
         results.push({
           id: ev.id,
           artist: name,
@@ -613,13 +498,13 @@ async function fetchTMShows(artistNames, type, similarMeta=[]) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Last.fm similar artists
+// Last.fm similar artists — called directly from frontend
 // ─────────────────────────────────────────────────────────────
 async function fetchSimilarArtists(names) {
   const map = new Map();
   await Promise.all(names.map(async name => {
     try {
-      const r = await fetch(`https://ws.audioscrobbler.com/2.0/?method=artist.getSimilar&artist=${encodeURIComponent(name)}&api_key=${cfg.lfmKey}&format=json&limit=5`);
+      const r = await fetch(`https://ws.audioscrobbler.com/2.0/?method=artist.getSimilar&artist=${encodeURIComponent(name)}&api_key=${LASTFM_API_KEY}&format=json&limit=5`);
       const d = await r.json();
       (d.similarartists?.artist || []).forEach(sim => {
         if (!map.has(sim.name)) map.set(sim.name, { name: sim.name, score: Math.round(parseFloat(sim.match)*100), match: [name] });
@@ -636,14 +521,15 @@ async function fetchSimilarArtists(names) {
 function renderFeed(title, shows) {
   const fc = document.getElementById('feed-content');
   if (!shows.length) {
-    fc.innerHTML = `<div class="mh"><div class="mh-title">${esc(title)}</div><div class="mh-sub">No shows found within ${cfg.radius||25} miles. Try a wider radius in ⚙ Setup.</div></div>`;
+    fc.innerHTML = `<div class="mh"><div class="mh-title">${esc(title)}</div><div class="mh-sub">No shows found within ${cfg.radius||25} miles of ${userLoc?.city||'you'}.</div></div>`;
     return;
   }
 
   const byDate = {};
   shows.forEach(s => { const k = s.date||'TBD'; if(!byDate[k]) byDate[k]=[]; byDate[k].push(s); });
 
-  const pl = shows.filter(s=>s.type==='playlist'), sim = shows.filter(s=>s.type==='similar');
+  const pl  = shows.filter(s=>s.type==='playlist');
+  const sim = shows.filter(s=>s.type==='similar');
 
   let html = `<div class="mh">
     <div class="mh-title">${esc(title)}</div>
@@ -676,10 +562,11 @@ function cardHTML(s) {
   const init = s.artist.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const AVCOLORS = {A:'#FEF3C7,#92400E',B:'#FEE2E2,#991B1B',C:'#D1FAE5,#065F46',D:'#EDE9FE,#4C1D95',E:'#FED7AA,#9A3412',F:'#CFFAFE,#164E63',G:'#FCE7F3,#9D174D',H:'#FEF9C3,#713F12',I:'#F3F4F6,#374151',J:'#D1FAE5,#065F46',K:'#EDE9FE,#4C1D95',L:'#FEE2E2,#991B1B',M:'#FED7AA,#9A3412',N:'#CFFAFE,#164E63',O:'#FCE7F3,#9D174D',P:'#FEF3C7,#92400E',Q:'#D1FAE5,#065F46',R:'#EDE9FE,#4C1D95',S:'#FED7AA,#9A3412',T:'#FEE2E2,#991B1B',U:'#CFFAFE,#164E63',V:'#FCE7F3,#9D174D',W:'#FEF9C3,#713F12',X:'#D1FAE5,#065F46',Y:'#FEE2E2,#991B1B',Z:'#EDE9FE,#4C1D95'};
   const [bg, fg] = (AVCOLORS[init[0]] || '#F3F4F6,#374151').split(',');
-  const isSaved = saved.some(x=>x.id===s.id);
-  const price = s.minPrice ? `$${Math.round(s.minPrice)}${s.maxPrice&&s.maxPrice!==s.minPrice?'–$'+Math.round(s.maxPrice):''}` : '';
-  const loc = [s.venue, s.city, s.state].filter(Boolean).join(' · ');
-  const sid = esc(s.id), sJson = esc(JSON.stringify(s).replace(/'/g,"\\'"));
+  const isSaved  = saved.some(x=>x.id===s.id);
+  const price    = s.minPrice ? `$${Math.round(s.minPrice)}${s.maxPrice&&s.maxPrice!==s.minPrice?'–$'+Math.round(s.maxPrice):''}` : '';
+  const loc      = [s.venue, s.city, s.state].filter(Boolean).join(' · ');
+  const sid      = esc(s.id);
+  const sJson    = esc(JSON.stringify(s).replace(/'/g,"\\'"));
 
   return `<div class="sc${s.type==='similar'?' sim':''}" data-id="${sid}" data-type="${s.type}" onclick="openTickets('${esc(s.url||'')}')">
     <div class="av" style="background:${bg};color:${fg};">${init}</div>
@@ -725,12 +612,15 @@ function filter(type, btn) {
 // Spotify OAuth PKCE (personal playlists)
 // ─────────────────────────────────────────────────────────────
 function initiateSpotifyAuth() {
-  if (!cfg.spotifyClientId) { openConfig(); return; }
+  if (!SPOTIFY_CLIENT_ID) {
+    showToast('Spotify client ID not set', '');
+    return;
+  }
   const v = genVerifier(128);
   sessionStorage.setItem('pkce_v', v);
   genChallenge(v).then(ch => {
     location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
-      client_id: cfg.spotifyClientId,
+      client_id: SPOTIFY_CLIENT_ID,
       response_type: 'code',
       redirect_uri: location.origin + location.pathname,
       scope: 'playlist-read-private playlist-read-collaborative user-read-private',
@@ -759,7 +649,7 @@ async function handleSpotifyCallback() {
     const r = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: cfg.spotifyClientId, grant_type: 'authorization_code', code: p.get('code'), redirect_uri: location.origin+location.pathname, code_verifier: v })
+      body: new URLSearchParams({ client_id: SPOTIFY_CLIENT_ID, grant_type: 'authorization_code', code: p.get('code'), redirect_uri: location.origin+location.pathname, code_verifier: v })
     });
     const d = await r.json();
     if (d.access_token) {
@@ -781,7 +671,7 @@ async function onUserSpotifyConnected() {
 
 async function loadUserPlaylists() {
   const d = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', { headers: { 'Authorization': 'Bearer ' + spotifyToken } }).then(r=>r.json());
-  const sec = document.getElementById('user-playlists-section');
+  const sec  = document.getElementById('user-playlists-section');
   const list = document.getElementById('user-playlists');
   sec.style.display = '';
   list.innerHTML = '';
@@ -826,15 +716,15 @@ function updateSavedBadge() {
 }
 
 function renderSaved() {
-  const list = document.getElementById('saved-list');
+  const list  = document.getElementById('saved-list');
   const empty = document.getElementById('saved-empty');
   list.innerHTML = '';
   empty.style.display = saved.length ? 'none' : '';
   saved.forEach(s => {
-    const init = s.artist.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const price = s.minPrice ? `$${Math.round(s.minPrice)}` : '';
+    const init    = s.artist.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const price   = s.minPrice ? `$${Math.round(s.minPrice)}` : '';
     const dateStr = s.date ? new Date(s.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : 'TBD';
-    const card = document.createElement('div');
+    const card    = document.createElement('div');
     card.className = 'svc';
     card.innerHTML = `<div class="svt"><div class="sva" style="background:#FED7AA;color:#9A3412;">${init}</div>
       <div><div class="svar">${esc(s.artist)}</div><div class="svv">${esc(s.venue)}</div></div></div>
@@ -873,7 +763,7 @@ function promptLocation() {
 async function reverseGeocode(lat, lng) {
   try {
     const d = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`).then(r=>r.json());
-    const city = d.address.city || d.address.town || 'Nearby';
+    const city  = d.address.city || d.address.town || 'Nearby';
     const state = d.address.state_code || '';
     userLoc.city = `${city}${state?', '+state:''}`;
     cfg.location = userLoc; save();
@@ -895,34 +785,9 @@ async function geocodeCity(city) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Config
+// Persist cfg (location + radius)
 // ─────────────────────────────────────────────────────────────
-function loadConfigUI() {
-  if (cfg.tokenServer) document.getElementById('token-server').value = cfg.tokenServer;
-  if (cfg.tmKey) document.getElementById('tm-key').value = cfg.tmKey;
-  if (cfg.lfmKey) document.getElementById('lfm-key').value = cfg.lfmKey;
-  if (cfg.spotifyClientId) document.getElementById('sp-cid').value = cfg.spotifyClientId;
-  if (cfg.radius) document.getElementById('radius').value = cfg.radius;
-}
-
-function saveConfig() {
-  cfg.tokenServer = document.getElementById('token-server').value.trim();
-  cfg.tmKey = document.getElementById('tm-key').value.trim();
-  cfg.lfmKey = document.getElementById('lfm-key').value.trim();
-  cfg.spotifyClientId = document.getElementById('sp-cid').value.trim();
-  cfg.radius = parseInt(document.getElementById('radius').value) || 25;
-  save();
-  if (cfg.tmKey) setStatus('tm-st','ok','Ticketmaster: connected');
-  if (cfg.lfmKey) setStatus('lfm-st','ok','Last.fm: connected');
-  closeConfig();
-  showToast('Config saved','');
-  autoLoadFirst();
-}
-
 function save() { localStorage.setItem(CFG, JSON.stringify(cfg)); }
-function openConfig() { document.getElementById('co').classList.add('open'); }
-function closeConfig() { document.getElementById('co').classList.remove('open'); }
-function setStatus(id, level, msg) { const el=document.getElementById(id); el.className=`as ${level}`; el.innerHTML=`<span class="asd"></span> ${msg}`; }
 
 // ─────────────────────────────────────────────────────────────
 // UI helpers

@@ -22,7 +22,9 @@ export default async function handler(req, res) {
   }
 
   // Forward all query params from the frontend, inject the key server-side
+  // Strip `source` — it's a frontend routing hint, not a TM param
   const params = new URLSearchParams(req.query);
+  params.delete('source');
   params.set('apikey', apiKey);
 
   try {
