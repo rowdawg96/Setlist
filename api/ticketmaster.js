@@ -8,7 +8,7 @@
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || '';
-  const allowed = process.env.ALLOWED_ORIGIN || '*';
+  const allowed = req.headers.origin?.includes('rowdawg') ? req.headers.origin : process.env.ALLOWED_ORIGIN || '*';  res.setHeader('Access-Control-Allow-Origin', allowed);
   res.setHeader('Access-Control-Allow-Origin', allowed);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -22,9 +22,7 @@ export default async function handler(req, res) {
   }
 
   // Forward all query params from the frontend, inject the key server-side
-  // Strip `source` — it's a frontend routing hint, not a TM param
   const params = new URLSearchParams(req.query);
-  params.delete('source');
   params.set('apikey', apiKey);
 
   try {
