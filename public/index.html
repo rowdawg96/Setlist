@@ -448,7 +448,7 @@ async function loadPublicPlaylist(playlistId, playlistName) {
   }
 
   try {
-    const r = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(artists))`, {
+    const r = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!r.ok) throw new Error('Spotify error ' + r.status);
@@ -566,39 +566,45 @@ async function fetchSimilarArtists(names) {
 // ─────────────────────────────────────────────────────────────
 function renderFeed(title, shows) {
   const fc = document.getElementById('feed-content');
+  const pl  = shows.filter(s=>s.type==='playlist');
+  const sim = shows.filter(s=>s.type==='similar');
+
   if (!shows.length) {
     fc.innerHTML = `<div class="mh"><div class="mh-title">${esc(title)}</div><div class="mh-sub">No shows found within ${cfg.radius||25} miles of ${userLoc?.city||'you'}.</div></div>`;
     return;
   }
 
-  const byDate = {};
-  shows.forEach(s => { const k = s.date||'TBD'; if(!byDate[k]) byDate[k]=[]; byDate[k].push(s); });
+  function groupByDate(list) {
+    const map = {};
+    list.forEach(s => { const k = s.date||'TBD'; if(!map[k]) map[k]=[]; map[k].push(s); });
+    return map;
+  }
 
-  const pl  = shows.filter(s=>s.type==='playlist');
-  const sim = shows.filter(s=>s.type==='similar');
+  function dateGroupsHTML(list) {
+    return Object.entries(groupByDate(list)).map(([date, dayShows]) => {
+      const dt = date !== 'TBD' ? new Date(date+'T12:00:00') : null;
+      return `<div class="dg">
+        <div class="dh">
+          <div class="dd">${dt ? dt.toLocaleDateString('en-US',{weekday:'long'}) : 'Date TBD'}</div>
+          <div class="dl">${dt ? dt.toLocaleDateString('en-US',{month:'long',day:'numeric'}) : ''}</div>
+          <div class="dc">${dayShows.length} show${dayShows.length!==1?'s':''}</div>
+        </div>
+        ${dayShows.map(s => cardHTML(s)).join('')}
+      </div>`;
+    }).join('');
+  }
 
   let html = `<div class="mh">
     <div class="mh-title">${esc(title)}</div>
-    <div class="mh-sub"><em>${pl.length} artist${pl.length!==1?'s':''} from this playlist</em> playing near you · ${sim.length} similar picks</div>
-    <div class="filter-row">
-      <button class="fb active" onclick="filter('all',this)">All (${shows.length})</button>
-      <button class="fb" onclick="filter('playlist',this)">On playlist (${pl.length})</button>
-      <button class="fb" onclick="filter('similar',this)">Similar artists (${sim.length})</button>
-    </div>
+    <div class="mh-sub"><em>${pl.length} artist${pl.length!==1?'s':''} from this playlist</em> playing near you${sim.length ? ` · ${sim.length} similar picks` : ''}</div>
   </div><div class="feed" id="shows-feed">`;
 
-  Object.entries(byDate).forEach(([date, dayShows]) => {
-    const ordered = [...dayShows.filter(s=>s.type==='playlist'), ...dayShows.filter(s=>s.type==='similar')];
-    const dt = date !== 'TBD' ? new Date(date+'T12:00:00') : null;
-    html += `<div class="dg">
-      <div class="dh">
-        <div class="dd">${dt ? dt.toLocaleDateString('en-US',{weekday:'long'}) : 'Date TBD'}</div>
-        <div class="dl">${dt ? dt.toLocaleDateString('en-US',{month:'long',day:'numeric'}) : ''}</div>
-        <div class="dc">${ordered.length} show${ordered.length!==1?'s':''}</div>
-      </div>
-      ${ordered.map(s => cardHTML(s)).join('')}
-    </div>`;
-  });
+  html += dateGroupsHTML(pl);
+
+  if (sim.length > 0) {
+    html += `<div class="sdiv"><div class="sdl"></div><div class="sdt">Similar Artists</div><div class="sdl"></div></div>`;
+    html += dateGroupsHTML(sim);
+  }
 
   html += `</div>`;
   fc.innerHTML = html;
@@ -640,18 +646,6 @@ function cardHTML(s) {
       ${price?`<span class="sp2">${esc(price)}</span>`:''}
     </div>
   </div>`;
-}
-
-function filter(type, btn) {
-  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.sc').forEach(c => {
-    c.style.display = (type==='all'||c.dataset.type===type) ? '' : 'none';
-  });
-  document.querySelectorAll('.dg').forEach(g => {
-    const vis = [...g.querySelectorAll('.sc')].some(c=>c.style.display!=='none');
-    g.style.display = vis ? '' : 'none';
-  });
 }
 
 // ─────────────────────────────────────────────────────────────
