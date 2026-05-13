@@ -411,6 +411,13 @@ async function autoLoadFirst() {
 // ─────────────────────────────────────────────────────────────
 async function getPublicToken() {
   if (publicToken && Date.now() < publicTokenExpiry) return publicToken;
+
+  // Restore OAuth token from localStorage if the in-memory var was cleared (e.g. page refresh)
+  if (!spotifyToken) {
+    const tok = localStorage.getItem('sl_sp_tok');
+    const exp = parseInt(localStorage.getItem('sl_sp_exp') || '0');
+    if (tok && Date.now() < exp) spotifyToken = tok;
+  }
   if (spotifyToken) return spotifyToken;
 
   try {
@@ -702,15 +709,17 @@ async function handleSpotifyCallback() {
 }
 
 async function onUserSpotifyConnected() {
+  const token = spotifyToken || localStorage.getItem('sl_sp_tok');
+  if (!token) return;
   try {
-    const me = await fetch('https://api.spotify.com/v1/me', { headers: { 'Authorization': 'Bearer ' + spotifyToken } }).then(r=>r.json());
+    const me = await fetch('https://api.spotify.com/v1/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r=>r.json());
     document.getElementById('sp-area').innerHTML = `<div class="user-av" title="${esc(me.display_name||'')}">${(me.display_name||'?')[0].toUpperCase()}</div>`;
     await loadUserPlaylists();
   } catch(e) { localStorage.removeItem('sl_sp_tok'); spotifyToken = null; }
 }
 
 async function loadUserPlaylists() {
-  const token = spotifyToken;
+  const token = spotifyToken || localStorage.getItem('sl_sp_tok');
   if (!token) return;
   try {
     const r = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
