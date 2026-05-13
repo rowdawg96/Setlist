@@ -172,7 +172,7 @@
     </a>
     <div class="url-bar">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A8A29E" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-      <input type="text" id="url-input" placeholder="Paste a Spotify playlist URL…" />
+      <input type="text" id="url-input" placeholder="Paste a Spotify playlist URL…" onkeydown="if(event.key==='Enter')loadFromUrl()" />
       <button class="url-bar-btn" onclick="loadFromUrl()">Load</button>
     </div>
     <div class="topbar-right">
@@ -203,11 +203,13 @@
       <span class="nav-ct" id="nc-saved">0</span>
     </div>
 
-    <!-- Editorial playlists — always shown, no auth needed -->
-    <div class="sb-label">Spotify Playlists</div>
-    <div id="example-playlists"></div>
+    <!-- Editorial playlists — shown to users who haven't connected Spotify -->
+    <div id="editorial-section">
+      <div class="sb-label">Spotify Playlists</div>
+      <div id="example-playlists"></div>
+    </div>
 
-    <!-- User playlists — shown after Spotify connect -->
+    <!-- User playlists — replaces editorial after Spotify connect -->
     <div id="user-playlists-section" style="display:none">
       <div class="sb-label">Your Playlists</div>
       <div id="user-playlists"></div>
@@ -287,6 +289,7 @@ let publicToken  = null;
 let publicTokenExpiry = 0;
 let allShows = [];
 let userLoc  = cfg.location || null;
+let editorialVerification = null;  // Promise — awaited before auto-loading editorial
 
 // ─────────────────────────────────────────────────────────────
 // Init
@@ -295,22 +298,33 @@ window.addEventListener('load', async () => {
   renderEditorialPlaylists();
   updateSavedBadge();
   renderSaved();
-  handleSpotifyCallback();
 
-  // Restore user Spotify session
-  const tok = localStorage.getItem('sl_sp_tok');
-  const exp = parseInt(localStorage.getItem('sl_sp_exp') || '0');
-  if (tok && Date.now() < exp) {
-    spotifyToken = tok;
-    onUserSpotifyConnected();
+  // Must complete before anything else so spotifyToken is set
+  await handleSpotifyCallback();
+
+  // Restore existing session only if callback didn't just establish one
+  if (!spotifyToken) {
+    const tok = localStorage.getItem('sl_sp_tok');
+    const exp = parseInt(localStorage.getItem('sl_sp_exp') || '0');
+    if (tok && Date.now() < exp) {
+      spotifyToken = tok;
+      await onUserSpotifyConnected();
+      // onUserSpotifyConnected → loadUserPlaylists handles auto-loading
+    }
+  }
+
+  // Start editorial verification in background (used if no Spotify)
+  if (!spotifyToken) {
+    editorialVerification = verifyEditorialPlaylists();
   }
 
   if (userLoc) {
     document.getElementById('loc-label').textContent =
       `${userLoc.city || (userLoc.lat.toFixed(2)+','+userLoc.lng.toFixed(2))} · ${cfg.radius||25}mi`;
-    await autoLoadFirst();
+    // Only auto-load editorial here; Spotify path was handled above in onUserSpotifyConnected
+    if (!spotifyToken) await autoLoadFirst();
   } else {
-    // Trigger browser geolocation automatically on first visit
+    // Geolocation fires on first load; cached location handled above
     promptLocation();
   }
 });
@@ -344,7 +358,30 @@ function renderEditorialPlaylists() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Auto-load first editorial playlist once location is available
+// Verify editorial playlist IDs against Spotify — filter 404s
+// ─────────────────────────────────────────────────────────────
+async function verifyEditorialPlaylists() {
+  const token = await getPublicToken();
+  if (!token) return;
+  const results = await Promise.all(
+    EDITORIAL_PLAYLISTS.map(async pl => {
+      try {
+        const r = await fetch(`https://api.spotify.com/v1/playlists/${pl.id}?fields=id`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        return r.ok ? pl : null;
+      } catch { return null; }
+    })
+  );
+  const valid = results.filter(Boolean);
+  EDITORIAL_PLAYLISTS.length = 0;
+  valid.forEach(pl => EDITORIAL_PLAYLISTS.push(pl));
+  // Don't re-render if user has since connected Spotify (section is hidden)
+  if (!spotifyToken) renderEditorialPlaylists();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auto-load first playlist (editorial or user) once location is known
 // ─────────────────────────────────────────────────────────────
 async function autoLoadFirst() {
   if (!userLoc) {
@@ -357,7 +394,16 @@ async function autoLoadFirst() {
       </div>`;
     return;
   }
-  await loadPublicPlaylist(EDITORIAL_PLAYLISTS[0].id, EDITORIAL_PLAYLISTS[0].name);
+  if (spotifyToken) {
+    // Click first user playlist item (rendered by loadUserPlaylists)
+    const first = document.querySelector('#user-playlists .ex-playlist');
+    if (first) { first.click(); return; }
+  }
+  // Editorial path — wait for verification to finish so we don't hit a 404
+  if (editorialVerification) await editorialVerification;
+  if (EDITORIAL_PLAYLISTS.length > 0) {
+    await loadPublicPlaylist(EDITORIAL_PLAYLISTS[0].id, EDITORIAL_PLAYLISTS[0].name);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -656,7 +702,7 @@ async function handleSpotifyCallback() {
       spotifyToken = d.access_token;
       localStorage.setItem('sl_sp_tok', spotifyToken);
       localStorage.setItem('sl_sp_exp', Date.now() + d.expires_in * 1000);
-      onUserSpotifyConnected();
+      await onUserSpotifyConnected();
     }
   } catch(e) {}
 }
@@ -665,30 +711,58 @@ async function onUserSpotifyConnected() {
   try {
     const me = await fetch('https://api.spotify.com/v1/me', { headers: { 'Authorization': 'Bearer ' + spotifyToken } }).then(r=>r.json());
     document.getElementById('sp-area').innerHTML = `<div class="user-av" title="${esc(me.display_name||'')}">${(me.display_name||'?')[0].toUpperCase()}</div>`;
-    loadUserPlaylists();
+    await loadUserPlaylists();
   } catch(e) { localStorage.removeItem('sl_sp_tok'); spotifyToken = null; }
 }
 
 async function loadUserPlaylists() {
-  const d = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', { headers: { 'Authorization': 'Bearer ' + spotifyToken } }).then(r=>r.json());
-  const sec  = document.getElementById('user-playlists-section');
-  const list = document.getElementById('user-playlists');
-  sec.style.display = '';
-  list.innerHTML = '';
-  const colors = [['#FED7AA','#9A3412'],['#D1FAE5','#065F46'],['#E0E7FF','#3730A3'],['#FCE7F3','#9D174D'],['#FEF9C3','#713F12'],['#CFFAFE','#164E63']];
-  (d.items || []).forEach((pl, i) => {
-    const [bg, fg] = colors[i % colors.length];
-    const div = document.createElement('div');
-    div.className = 'ex-playlist';
-    div.innerHTML = `<div class="ex-thumb" style="background:${bg};color:${fg};">${pl.name.slice(0,2).toUpperCase()}</div>
-      <div style="min-width:0;flex:1;"><div class="ex-name">${esc(pl.name)}</div><div class="ex-meta">${pl.tracks.total} tracks</div></div>`;
-    div.onclick = () => {
-      document.querySelectorAll('.ex-playlist, .playlist-item').forEach(p=>p.classList.remove('active'));
-      div.classList.add('active');
-      loadPublicPlaylist(pl.id, pl.name);
-    };
-    list.appendChild(div);
-  });
+  try {
+    const d = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
+      headers: { 'Authorization': 'Bearer ' + spotifyToken }
+    }).then(r => r.json());
+
+    // Editorial playlists are demo-only — replace them with user's own
+    document.getElementById('editorial-section').style.display = 'none';
+
+    const sec  = document.getElementById('user-playlists-section');
+    const list = document.getElementById('user-playlists');
+    sec.style.display = '';
+    list.innerHTML = '';
+
+    const playlists = d.items || [];
+    const colors = [['#FED7AA','#9A3412'],['#D1FAE5','#065F46'],['#E0E7FF','#3730A3'],['#FCE7F3','#9D174D'],['#FEF9C3','#713F12'],['#CFFAFE','#164E63']];
+    playlists.forEach((pl, i) => {
+      const [bg, fg] = colors[i % colors.length];
+      const div = document.createElement('div');
+      div.className = 'ex-playlist' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<div class="ex-thumb" style="background:${bg};color:${fg};">${pl.name.slice(0,2).toUpperCase()}</div>
+        <div style="min-width:0;flex:1;"><div class="ex-name">${esc(pl.name)}</div><div class="ex-meta">${pl.tracks.total} tracks</div></div>`;
+      div.onclick = () => {
+        document.querySelectorAll('.ex-playlist, .playlist-item').forEach(p => p.classList.remove('active'));
+        div.classList.add('active');
+        loadPublicPlaylist(pl.id, pl.name);
+      };
+      list.appendChild(div);
+    });
+
+    // Auto-load first playlist if location is available
+    if (playlists.length > 0 && userLoc) {
+      await loadPublicPlaylist(playlists[0].id, playlists[0].name);
+    } else if (playlists.length > 0 && !userLoc) {
+      // Show location prompt so user knows what to do next
+      document.getElementById('feed-content').innerHTML = `
+        <div class="sp">
+          <div class="si"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="st2">Almost there</div>
+          <div class="ss">Grant location access so we can find shows from your playlists near you.</div>
+          <button style="margin-top:8px;font-size:13px;font-family:var(--fb);padding:8px 16px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;cursor:pointer;" onclick="promptLocation()">Share location</button>
+        </div>`;
+    }
+  } catch(e) {
+    console.error('Failed to load user playlists:', e);
+    localStorage.removeItem('sl_sp_tok');
+    spotifyToken = null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
